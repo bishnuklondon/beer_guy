@@ -8,6 +8,12 @@ This workspace now contains three starter projects:
 
 ## Quick start
 
+### Prerequisite:
+
+- Download the UK post code data from https://geoportal.statistics.gov.uk/datasets/6fff67d204fd4f339591ed667a6e3642/about
+- Create a new folder called "data" in the root project directory 
+- Extract the downloaded zip file into the data folder 
+
 ### Backend
 
 ```bash
