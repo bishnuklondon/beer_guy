@@ -4,11 +4,12 @@ from typing import Any, Dict, List, Optional
 import duckdb
 import pyarrow as pa
 from deltalake import DeltaTable, write_deltalake
+from .config import LAD_LOOKUP_PATH, POSTCODE_DATA_DIR, COUNTY_LOOKUP_PATH, DELTA_DIR
 
 
 class DeltaStore:
     def __init__(self, root_dir: Optional[Path] = None) -> None:
-        self.root_dir = Path(root_dir) if root_dir else Path(__file__).resolve().parents[1] / "data" / "delta_tables"
+        self.root_dir = Path(root_dir) if root_dir else DELTA_DIR
         self.root_dir.mkdir(parents=True, exist_ok=True)
 
     def _table_path(self, table_name: str) -> Path:

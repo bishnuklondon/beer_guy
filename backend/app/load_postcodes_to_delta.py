@@ -4,27 +4,24 @@ from typing import Dict, List, Optional
 import duckdb
 import pyarrow as pa
 from deltalake import write_deltalake
+from .config import LAD_LOOKUP_PATH, POSTCODE_DATA_DIR, COUNTY_LOOKUP_PATH, DELTA_DIR
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_POSTCODE_DIR = PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "multi_csv"
-DEFAULT_LAD_LOOKUP_PATH = (
-    PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "LAD Local Authority District names and codes UK as at 04_25.csv"
-)
-DEFAULT_COUNTY_LOOKUP_PATH = (
-    PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "CTY County names and codes UK as at 05_25.csv"
-)
-DEFAULT_OUTPUT_DIR = PROJECT_ROOT / "backend" / "data" / "delta_tables"
+DEFAULT_POSTCODE_DIR = POSTCODE_DATA_DIR
+DEFAULT_LAD_LOOKUP_PATH = LAD_LOOKUP_PATH
+DEFAULT_COUNTY_LOOKUP_PATH = COUNTY_LOOKUP_PATH
+DEFAULT_OUTPUT_DIR = DELTA_DIR
 
 
 def resolve_data_paths(postcode_dir: Optional[Path] = None, lad_lookup_path: Optional[Path] = None, county_lookup_path: Optional[Path] = None) -> tuple[Path, Path, Path]:
     candidates = []
     if postcode_dir is not None:
         candidates.append(Path(postcode_dir))
-    candidates.extend(
-        [
-            PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "multi_csv"
-        ]
+        candidates.extend(
+            [
+                POSTCODE_DATA_DIR
+            ]
     )
     postcode_dir = next((candidate for candidate in candidates if candidate.exists()), None)
     if postcode_dir is None:
@@ -33,13 +30,10 @@ def resolve_data_paths(postcode_dir: Optional[Path] = None, lad_lookup_path: Opt
     lad_candidates = []
     if lad_lookup_path is not None:
         lad_candidates.append(Path(lad_lookup_path))
-    lad_candidates.extend(
-        [
-            PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "LAD Local Authority District names and codes UK as at 04_25.csv",
-            PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Documents" / "LAD Local Authority District names and codes UK as at 04_25.csv",
-            PROJECT_ROOT / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "LAD Local Authority District names and codes UK as at 04_25.csv",
-            PROJECT_ROOT / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Documents" / "LAD Local Authority District names and codes UK as at 04_25.csv",
-        ]
+        lad_candidates.extend(
+            [
+                LAD_LOOKUP_PATH
+            ]
     )
     lad_lookup_path = next((candidate for candidate in lad_candidates if candidate.exists()), None)
     if lad_lookup_path is None:
@@ -48,11 +42,10 @@ def resolve_data_paths(postcode_dir: Optional[Path] = None, lad_lookup_path: Opt
     county_candidates = []
     if county_lookup_path is not None:
         county_candidates.append(Path(county_lookup_path))
-    county_candidates.extend(
-        [
-            PROJECT_ROOT / "backend" / "data" / "POST_CODE_INVENTORY_ONSPD_FEB_2026" / "Data" / "CTY County names and codes UK as at 05_25.csv",
-            
-        ]
+        county_candidates.extend(
+            [
+            COUNTY_LOOKUP_PATH
+            ]
     )
     county_lookup_path = next((candidate for candidate in county_candidates if candidate.exists()), None)
     if county_lookup_path is None:
