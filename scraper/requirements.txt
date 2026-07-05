@@ -1,4 +1,0 @@
-requests>=2.32.0
-beautifulsoup4>=4.15.0
-pyarrow>=17.0.0
-deltalake>=0.18.0
