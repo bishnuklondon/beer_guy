@@ -6,6 +6,7 @@ import pyarrow as pa
 from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastmcp import FastMCP
 from pydantic import BaseModel
 
 from .config import LAD_LOOKUP_PATH, POSTCODE_DATA_DIR
@@ -21,6 +22,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+mcp = FastMCP("your-server-name")
 
 store = DeltaStore()
 
@@ -56,11 +58,13 @@ def ensure_seed_data() -> None:
 
 
 @app.get("/health")
+@mcp.tool
 def health() -> Dict[str, Any]:
     return {"status": "ok"}
 
 
 @app.post("/districts/load-postcodes")
+@mcp.tool
 def load_postcodes() -> Dict[str, Any]:
     postcode_table = load_postcode_inventory(POSTCODE_DATA_DIR, LAD_LOOKUP_PATH)
     store.save_arrow_table("postcode_inventory", postcode_table, mode="overwrite")
@@ -68,6 +72,7 @@ def load_postcodes() -> Dict[str, Any]:
 
 
 @app.get("/districts")
+@mcp.tool
 def list_districts(county: Optional[str] = Query(default=None)) -> List[Dict[str, Any]]:
     ensure_seed_data()
     query = "SELECT DISTINCT district_name, county_name FROM source"
@@ -110,12 +115,14 @@ def fetch_and_save_pubs_for_district(district_post_code: str, limit: int) -> Dic
 
 
 @app.post("/pubs/fetch-and-save")
+@mcp.tool
 def fetch_and_save_pubs(payload: PubPayload) -> Dict[str, Any]:
     ensure_seed_data()
     return fetch_and_save_pubs_for_district(payload.district_post_code, payload.limit)
 
 
-@app.post("/pubs/fetch-and-save-by-county")
+# @app.post("/pubs/fetch-and-save-by-county")
+# @mcp.tool
 def fetch_and_save_pubs_by_county(payload: CountyPubPayload) -> Dict[str, Any]:
     ensure_seed_data()
     district_rows = store.query_table(
@@ -148,6 +155,7 @@ def fetch_and_save_pubs_by_county(payload: CountyPubPayload) -> Dict[str, Any]:
 
 
 @app.get("/pubs")
+@mcp.tool
 def list_pubs(district_name: Optional[str] = Query(default=None), search: Optional[str] = None) -> List[Dict[str, Any]]:
     if district_name:
         table_name = f"pubs_all"
@@ -168,6 +176,7 @@ def list_pubs(district_name: Optional[str] = Query(default=None), search: Option
 
 
 @app.delete("/tables/{table_name}")
+@mcp.tool
 def delete_table_rows(table_name: str) -> Dict[str, Any]:
     try:
         rows_deleted = store.delete_all_rows(table_name)
@@ -177,44 +186,25 @@ def delete_table_rows(table_name: str) -> Dict[str, Any]:
 
 
 @app.get("/tables/{table_name}/schema")
+@mcp.tool
 def get_table_schema(table_name: str) -> List[Dict[str, Any]]:
     return store.get_schema(table_name)
 
 
 @app.get("/tables/{table_name}")
+@mcp.tool
 def read_table(table_name: str, query: Optional[str] = None) -> List[Dict[str, Any]]:
     if query:
         return store.query_table(table_name, query)
     return store.query_table(table_name, "SELECT * FROM source")
 
+mcp_app = mcp.http_app(path="/")
+app = FastAPI(lifespan=mcp_app.lifespan)   # lifespan MUST come from mcp_app
+app.mount("/mcp", mcp_app)
 
-@app.post("/mcp")
-def mcp(request: MCPRequest) -> Dict[str, Any]:
-    if request.tool == "list_tables":
-        return {"result": store.list_tables()}
-    if request.tool == "list_districts":
-        return {"result": list_districts()}
-    if request.tool == "fetch_and_save_pubs":
-        payload = request.arguments or {}
-        return fetch_and_save_pubs(
-            PubPayload(
-                district_post_code=str(payload.get("district_post_code", "")),
-                limit=int(payload.get("limit", 50)),
-            )
-        )
-    if request.tool == "read_table":
-        table_name = str(request.arguments.get("table_name", "")) if request.arguments else ""
-        query = str(request.arguments.get("query", "SELECT * FROM source")) if request.arguments else "SELECT * FROM source"
-        return {"result": read_table(table_name, query)}
-    if request.tool == "get_schema":
-        table_name = str(request.arguments.get("table_name", "")) if request.arguments else ""
-        return {"result": get_table_schema(table_name)}
-    raise HTTPException(status_code=400, detail="Unsupported MCP tool")
-
-
-@app.get("/mcp")
-async def mcp_get_not_supported():
-    return JSONResponse(
-        status_code=405,
-        content={"jsonrpc": "2.0", "error": {"code": -32000, "message": "Method not allowed."}, "id": None}
-    )
+# @app.get("/mcp")
+# async def mcp_get_not_supported():
+#     return JSONResponse(
+#         status_code=405,
+#         content={"jsonrpc": "2.0", "error": {"code": -32000, "message": "Method not allowed."}, "id": None}
+#     )

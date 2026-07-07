@@ -6,8 +6,6 @@ import pyarrow as pa
 from deltalake import write_deltalake
 from .config import LAD_LOOKUP_PATH, POSTCODE_DATA_DIR, COUNTY_LOOKUP_PATH, DELTA_DIR
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_POSTCODE_DIR = POSTCODE_DATA_DIR
 DEFAULT_LAD_LOOKUP_PATH = LAD_LOOKUP_PATH
 DEFAULT_COUNTY_LOOKUP_PATH = COUNTY_LOOKUP_PATH
